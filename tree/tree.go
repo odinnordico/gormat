@@ -14,21 +14,38 @@ const (
 	lastElemPrefix  Prefix = `└─ `
 	space           Prefix = "   "
 	pipe            Prefix = `│  `
-	newLine                = "\n\r"
 )
 
 type Node[T any] struct {
-	value    T
-	parent   *Node[T]
-	children []*Node[T]
+	value       T
+	parent      *Node[T]
+	children    []*Node[T]
+	printPrefix bool
 }
 
+// SetValue sets the value of the Node
 func (n *Node[T]) SetValue(v T) {
 	n.value = v
 }
 
+// Value retrieves the value of the Node
 func (n *Node[T]) Value() T {
 	return n.value
+}
+
+// PrintPrefix checks whether if print the prefix or not
+func (n *Node[T]) PrintPrefix() bool {
+	return n.printPrefix
+}
+
+// SetPrintPrefix sets the flag to print the prefix of the Node and its children
+func (n *Node[T]) SetPrintPrefix(p bool) {
+	n.printPrefix = p
+	if !n.IsLeaf() {
+		for i := range n.children {
+			n.children[i].SetPrintPrefix(p)
+		}
+	}
 }
 
 // Format generates a string representation of the tree with visual hierarchy.
@@ -40,22 +57,26 @@ func (n *Node[T]) Format() string {
 
 // formatHelper is a recursive helper to generate the tree structure.
 func (n *Node[T]) formatHelper(buffer *bytes.Buffer, prefix string, isLast bool) {
+	val := format.CleanString(fmt.Sprintf("%v", n.value))
 	// Choose prefix based on whether this node is the last child.
 	if n.IsRoot() {
-		buffer.WriteString(format.CleanString(fmt.Sprintf("%v", n.value)))
+		buffer.WriteString(format.CleanString(val))
 	} else {
 		branchPrefix := lastElemPrefix
 		if !isLast {
 			branchPrefix = firstElemPrefix
 		}
-		buffer.WriteString(fmt.Sprintf("%s%s%s", prefix, branchPrefix, format.CleanString(fmt.Sprintf("%v", n.value))))
+		if !n.printPrefix {
+			branchPrefix = space
+		}
+		fmt.Fprintf(buffer, "%s%s%s", prefix, branchPrefix, val)
 	}
-	buffer.WriteString("\n")
+	buffer.WriteString(format.NewLine)
 
 	// Update the prefix for child nodes
 	childPrefix := prefix
 	if !n.IsRoot() {
-		if isLast {
+		if isLast || !n.printPrefix {
 			childPrefix += string(space)
 		} else {
 			childPrefix += string(pipe)
@@ -81,6 +102,7 @@ func (n *Node[T]) IsLeaf() bool {
 // addChild safely adds a child node and sets its parent to the current node.
 func (n *Node[T]) addChild(c *Node[T]) {
 	c.parent = n
+	c.printPrefix = n.printPrefix
 	n.children = append(n.children, c)
 }
 
@@ -104,6 +126,9 @@ func (n *Node[T]) Children() []*Node[T] {
 }
 
 // NewRoot creates a new root node with a given value.
-func NewRoot[T any](v T) *Node[T] {
-	return &Node[T]{value: v}
+func NewRoot[T any](v T, prefix bool) *Node[T] {
+	return &Node[T]{
+		value:       v,
+		printPrefix: prefix,
+	}
 }
