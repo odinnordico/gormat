@@ -5,7 +5,7 @@ import (
 	"unicode"
 )
 
-const NewLine = "\n\r" // Check depending on OS
+const NewLine = "\n" // "\n\r" // Check depending on OS
 
 func CleanString(s string) string {
 	return strings.Map(func(r rune) rune {

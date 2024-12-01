@@ -1,145 +1,247 @@
-package list
+package list_test
 
 import (
+	"fmt"
 	"testing"
+
+	"github.com/google/go-cmp/cmp"
+	"github.com/odinnordico/gormat/list"
 )
 
+type testValue struct {
+	Filed1 string
+	Field2 int32
+	Field3 []byte
+}
+
+func (tv testValue) String() string {
+	return fmt.Sprintf("%s :: %d :: %s", tv.Filed1, tv.Field2, string(tv.Field3))
+}
+
 func TestItemValue(t *testing.T) {
-	item := NewItem("test")
-	if item.Value() != "test" {
-		t.Errorf("Expected value 'test', got %v", item.Value())
+	type args struct {
+		initialValue testValue
+		updatedValue testValue
 	}
-	item.SetValue("new")
-	if item.Value() != "new" {
-		t.Errorf("Expected value 'new', got %v", item.Value())
+	tests := []struct {
+		name string
+		args args
+	}{
+		{
+			name: "unique case",
+			args: args{
+				initialValue: testValue{
+					Filed1: "first",
+					Field2: 1,
+					Field3: []byte("value"),
+				},
+				updatedValue: testValue{
+					Filed1: "second",
+					Field2: 2,
+					Field3: []byte("val"),
+				},
+			},
+		},
 	}
-}
-
-func TestListPushFront(t *testing.T) {
-	list := NewList[string]('*')
-	item := NewItem("test")
-	err := list.PushFront(item)
-	if err != nil {
-		t.Errorf("Expected no error, got %v", err)
-	}
-
-	if list.At(0) != item {
-		t.Error("Item not added at front")
-	}
-}
-
-func TestListPushBack(t *testing.T) {
-	list := NewList[string]('*')
-	item := NewItem("test")
-	err := list.PushBack(item)
-	if err != nil {
-		t.Errorf("Expected no error, got %v", err)
-	}
-
-	if list.At(0) != item {
-		t.Error("Item not added at back")
-	}
-}
-
-func TestListPushAt(t *testing.T) {
-	list := NewList[string]('*')
-	item1 := NewItem("first")
-	item2 := NewItem("second")
-	item3 := NewItem("third")
-
-	list.PushBack(item1)
-	list.PushBack(item3)
-	list.PushAt(item2, 1)
-
-	if list.At(1) != item2 {
-		t.Error("Item not inserted at correct index")
+	for _, tt := range tests {
+		i := list.NewItem(tt.args.initialValue)
+		if diff := cmp.Diff(tt.args.initialValue, i.Value()); diff != "" {
+			t.Errorf("NewItem() (-want, +got) = %s", diff)
+		}
+		i.SetValue(tt.args.updatedValue)
+		if diff := cmp.Diff(tt.args.updatedValue, i.Value()); diff != "" {
+			t.Errorf("NewItem() (-want, +got) = %s", diff)
+		}
 	}
 }
 
-func TestListPopFront(t *testing.T) {
-	list := NewList[string]('*')
-	item := NewItem("test")
-	list.PushFront(item)
-
-	popped := list.PopFront()
-	if popped != item {
-		t.Error("Expected popped item to match pushed item")
+func TestListPushString(t *testing.T) {
+	type args struct {
+		front  string
+		middle string
+		back   string
 	}
-
-	if list.Len() != 0 {
-		t.Error("Expected list to be empty after pop")
+	tests := []struct {
+		name string
+		args args
+	}{
+		{
+			name: "push strings",
+			args: args{
+				front:  "front",
+				middle: "middle",
+				back:   "back",
+			},
+		},
 	}
-}
+	for _, tt := range tests {
+		l := list.NewList[string](0)
+		l.PushFront(list.NewItem(tt.args.middle))
+		l.PushFront(list.NewItem(tt.args.front))
+		l.PushBack(list.NewItem(tt.args.back))
+		if diff := cmp.Diff(tt.args.middle, l.At(1).Value()); diff != "" {
+			t.Errorf("NewList()At() (-want, +got) = %s", diff)
+		}
+		if i := l.At(-1); i != nil {
+			t.Errorf("At(negative) want nil but got %v", i)
+		}
+		if i := l.At(-l.Len()); i != nil {
+			t.Errorf("At(length) want nil but got %v", i)
+		}
+		if err := l.PushFront(nil); err == nil {
+			t.Errorf("PushFront() want error but got nil")
+		}
+		if err := l.PushBack(nil); err == nil {
+			t.Errorf("PushBack() want error but got nil")
+		}
+		if err := l.PushAt(nil, 0); err == nil {
+			t.Errorf("PushAt() want error but got nil")
+		}
 
-func TestListPopBack(t *testing.T) {
-	list := NewList[string]('*')
-	item := NewItem("test")
-	list.PushBack(item)
-
-	popped := list.PopBack()
-	if popped != item {
-		t.Error("Expected popped item to match pushed item")
-	}
-
-	if list.Len() != 0 {
-		t.Error("Expected list to be empty after pop")
-	}
-}
-
-func TestListPopAt(t *testing.T) {
-	list := NewList[string]('*')
-	item1 := NewItem("first")
-	item2 := NewItem("second")
-	list.PushBack(item1)
-	list.PushBack(item2)
-
-	popped := list.PopAt(1)
-	if popped != item2 {
-		t.Error("Expected to pop the second item")
-	}
-
-	if list.Len() != 1 {
-		t.Error("Expected list length to be 1 after pop")
-	}
-}
-
-func TestListAt(t *testing.T) {
-	list := NewList[string]('*')
-	item := NewItem("test")
-	list.PushBack(item)
-
-	if list.At(0) != item {
-		t.Error("Expected item to be at index 0")
-	}
-
-	if list.At(1) != nil {
-		t.Error("Expected nil for out-of-bounds index")
+		expected := []*list.Item[string]{
+			list.NewItem(tt.args.front),
+			list.NewItem(tt.args.middle),
+			list.NewItem(tt.args.back),
+		}
+		comparer := func(x, y list.Item[string]) bool {
+			return x.Value() == y.Value()
+		}
+		if diff := cmp.Diff(expected, l.Slice(), cmp.Comparer(comparer)); diff != "" {
+			t.Errorf("Slice() (-want, +got) = %s", diff)
+		}
 	}
 }
 
-func TestListLen(t *testing.T) {
-	list := NewList[string]('*')
-	if list.Len() != 0 {
-		t.Error("Expected length to be 0 for new list")
+func TestListPopIntEmpty(t *testing.T) {
+	tests := []struct {
+		name string
+	}{
+		{
+			name: "pop at empty",
+		},
 	}
+	for _, tt := range tests {
+		t.Log(tt.name)
+		l := list.NewList[int](0)
+		if i := l.PopFront(); i != nil {
+			t.Errorf("PopFront(empty) want nil but got %v", i.Value())
+		}
+		if i := l.PopBack(); i != nil {
+			t.Errorf("PopBack(empty) want nil but got %v", i.Value())
+		}
+		if i := l.PopAt(0); i != nil {
+			t.Errorf("PopAt(empty) want nil but got %v", i.Value())
+		}
+		if !l.IsEmpty() {
+			t.Errorf("IsEmpty want true but got false")
+		}
+	}
+}
+func TestListPopInt(t *testing.T) {
+	type args struct {
+		front  int
+		middle int
+		back   int
+	}
+	tests := []struct {
+		name string
+		args args
+	}{
+		{
+			name: "push strings",
+			args: args{
+				front:  1,
+				middle: 5,
+				back:   9,
+			},
+		},
+	}
+	for _, tt := range tests {
+		l := list.NewList[int](0)
+		l.PushFront(list.NewItem(tt.args.front))
+		l.PushAt(list.NewItem(tt.args.middle), 1)
+		l.PushBack(list.NewItem(tt.args.back))
+		// again but with At
+		l.PushAt(list.NewItem(tt.args.front), -1)
+		l.PushAt(list.NewItem(tt.args.middle), 2)
+		l.PushAt(list.NewItem(tt.args.back), l.Len()+2)
 
-	list.PushBack(NewItem("item"))
-	if list.Len() != 1 {
-		t.Error("Expected length to be 1 after adding an item")
+		if diff := cmp.Diff(tt.args.front, l.PopFront().Value()); diff != "" {
+			t.Errorf("PopFront() (-want, +got) = %s", diff)
+		}
+		if diff := cmp.Diff(tt.args.middle, l.PopAt(1).Value()); diff != "" {
+			t.Errorf("PopAt(middle) (-want, +got) = %s", diff)
+		}
+		if diff := cmp.Diff(tt.args.back, l.PopBack().Value()); diff != "" {
+			t.Errorf("PopBack() (-want, +got) = %s", diff)
+		}
+		// PopAt out of bounds
+		if diff := cmp.Diff(tt.args.front, l.PopAt(-1).Value()); diff != "" {
+			t.Errorf("PopFront() (-want, +got) = %s", diff)
+		}
+		if diff := cmp.Diff(tt.args.back, l.PopAt(l.Len()+2).Value()); diff != "" {
+			t.Errorf("PopAt(middle) (-want, +got) = %s", diff)
+		}
+
+		expected := []*list.Item[int]{
+			list.NewItem(tt.args.middle),
+		}
+		comparer := func(x, y list.Item[int]) bool {
+			return x.Value() == y.Value()
+		}
+		if diff := cmp.Diff(expected, l.Slice(), cmp.Comparer(comparer)); diff != "" {
+			t.Errorf("Slice() (-want, +got) = %s", diff)
+		}
 	}
 }
 
-func TestListFormat(t *testing.T) {
-	list := NewList[string]('*')
-	item1 := NewItem("first")
-	item2 := NewItem("second")
-	list.PushBack(item1)
-	list.PushBack(item2)
-
-	// Adjusted expected output to match Format's behavior
-	expected := "* first\n\r* second"
-	formatted := list.Format()
-	if formatted != expected {
-		t.Errorf("Expected formatted output:\n%s\nGot:\n%s", expected, formatted)
+func TestListFormatInt(t *testing.T) {
+	type args struct {
+		front  int
+		middle int
+		back   int
+		prefix rune
+	}
+	tests := []struct {
+		name     string
+		args     args
+		expected string
+	}{
+		{
+			name: "format with no rune",
+			args: args{
+				front:  1,
+				middle: 5,
+				back:   9,
+			},
+			expected: `1
+5
+9`,
+		},
+		{
+			name: "format with rune -",
+			args: args{
+				front:  2,
+				middle: 6,
+				back:   8,
+				prefix: '-',
+			},
+			expected: `- 2
+- 6
+- 8`,
+		},
+	}
+	for _, tt := range tests {
+		l := list.NewList[int](-1)
+		l.SetPrefix(tt.args.prefix)
+		if diff := cmp.Diff(tt.args.prefix, l.Prefix()); diff != "" {
+			t.Errorf("Prefix() (-want, +got) = %s", diff)
+		}
+		l.PushFront(list.NewItem(tt.args.front))
+		l.PushAt(list.NewItem(tt.args.middle), 1)
+		l.PushBack(list.NewItem(tt.args.back))
+		if diff := cmp.Diff(tt.expected, l.Format()); diff != "" {
+			t.Errorf("Format() (-want, +got) = %s", diff)
+		}
 	}
 }
