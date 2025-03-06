@@ -7,20 +7,23 @@ import (
 	"github.com/odinnordico/gormat/format"
 )
 
+// Prefix defines the common tree prefixes
 type Prefix string
 
 const (
-	firstElemPrefix Prefix = `├─ `
-	lastElemPrefix  Prefix = `└─ `
-	space           Prefix = "   "
-	pipe            Prefix = `│  `
+	firstElemPrefix Prefix = `├─ ` // Prefix for the first branch element
+	lastElemPrefix  Prefix = `└─ ` // Prefix for the last branch element
+	space           Prefix = "   " // Prefix blank space
+	pipe            Prefix = `│  ` // Prefix for non element
 )
 
+// Node is the basic element of a tree
 type Node[T any] struct {
-	value       T
-	parent      *Node[T]
-	children    []*Node[T]
-	printPrefix bool
+	value       T          // value of the node
+	parent      *Node[T]   // parent of the current node
+	children    []*Node[T] // children of the current node
+	printPrefix bool       // pintPrefix indicates if the Prefix will be used  when formatting the Tree. It is only necessary to be set in the root
+
 }
 
 // SetValue sets the value of the Node
@@ -125,8 +128,10 @@ func (n *Node[T]) Children() []*Node[T] {
 	return n.children
 }
 
-// NewRoot creates a new root node with a given value.
-func NewRoot[T any](v T, prefix bool) *Node[T] {
+// NewNode creates a root Node with a given value and if prefix print
+// The Node is root because it does not has either father nor children
+// but when added as a child the father is being updated
+func NewNode[T any](v T, prefix bool) *Node[T] {
 	return &Node[T]{
 		value:       v,
 		printPrefix: prefix,

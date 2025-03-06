@@ -17,7 +17,7 @@ func main() {
 }
 
 func treeTest() {
-	root := tree.NewRoot("root", true)
+	root := tree.NewNode("root", true)
 	setupChildren(root)
 	fmt.Println("## With prefix")
 	fmt.Print(root.Format())
@@ -28,15 +28,15 @@ func treeTest() {
 
 func setupChildren(root *tree.Node[string]) {
 	for i := 1; i <= squareChildren; i++ {
-		child := tree.NewRoot(fmt.Sprintf("child-%d", i), root.PrintPrefix())
+		child := tree.NewNode(fmt.Sprintf("child-%d", i), root.PrintPrefix())
 		root.AddChildren(child)
 
 		for j := 1; j <= squareChildren; j++ {
-			grandChild := tree.NewRoot(fmt.Sprintf("grand-child-%d-%d", i, j), root.PrintPrefix())
+			grandChild := tree.NewNode(fmt.Sprintf("grand-child-%d-%d", i, j), root.PrintPrefix())
 			child.AddChildren(grandChild)
 
 			for k := 1; k <= squareChildren; k++ {
-				grandGrandChild := tree.NewRoot(fmt.Sprintf("grand-grand child-%d-%d-%d", i, j, k), root.PrintPrefix())
+				grandGrandChild := tree.NewNode(fmt.Sprintf("grand-grand child-%d-%d-%d", i, j, k), root.PrintPrefix())
 				grandChild.AddChildren(grandGrandChild)
 			}
 		}

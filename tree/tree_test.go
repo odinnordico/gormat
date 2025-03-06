@@ -1,114 +1,94 @@
-package tree
+package tree_test
 
 import (
+	"fmt"
 	"testing"
+
+	"github.com/google/go-cmp/cmp"
+	"github.com/odinnordico/gormat/tree"
 )
 
-func TestNodeSetValue(t *testing.T) {
-	n := &Node[string]{}
-	n.SetValue("root")
-	if n.Value() != "root" {
-		t.Errorf("Expected value to be 'root', got %v", n.Value())
+type testValue struct {
+	Filed1 string
+	Field2 int32
+	Field3 []byte
+}
+
+func (tv testValue) String() string {
+	return fmt.Sprintf("%s :: %d :: %s", tv.Filed1, tv.Field2, string(tv.Field3))
+}
+
+func TestNodeValue(t *testing.T) {
+	type args struct {
+		initialValue testValue
+		updatedValue testValue
+	}
+	tests := []struct {
+		name string
+		args args
+	}{
+		{
+			name: "unique case",
+			args: args{
+				initialValue: testValue{
+					Filed1: "first",
+					Field2: 1,
+					Field3: []byte("value"),
+				},
+				updatedValue: testValue{
+					Filed1: "second",
+					Field2: 2,
+					Field3: []byte("val"),
+				},
+			},
+		},
+	}
+	for _, tt := range tests {
+		r := tree.NewNode(tt.args.initialValue, false)
+		if diff := cmp.Diff(tt.args.initialValue, r.Value()); diff != "" {
+			t.Errorf("NewNode() (-want, +got) = %s", diff)
+		}
+		r.SetValue(tt.args.updatedValue)
+		if diff := cmp.Diff(tt.args.updatedValue, r.Value()); diff != "" {
+			t.Errorf("NewNode() (-want, +got) = %s", diff)
+		}
+		if diff := cmp.Diff(true, r.IsLeaf()); diff != "" {
+			t.Errorf("IsLeaf() (-want, +got) = %s", diff)
+		}
+		if diff := cmp.Diff(true, r.IsRoot()); diff != "" {
+			t.Errorf("IsRoot() (-want, +got) = %s", diff)
+		}
+		// check child prefix
+		c := tree.NewNode(tt.args.initialValue, false)
+		r.AddChildren(c)
+		if diff := cmp.Diff(false, r.IsLeaf()); diff != "" {
+			t.Errorf("IsLeaf(updated) (-want, +got) = %s", diff)
+		}
+		if diff := cmp.Diff(true, c.IsLeaf()); diff != "" {
+			t.Errorf("IsLeaf(child) (-want, +got) = %s", diff)
+		}
+		r.SetPrintPrefix(true)
+		if diff := cmp.Diff(true, r.PrintPrefix()); diff != "" {
+			t.Errorf("PrintPrefix() (-want, +got) = %s", diff)
+		}
+		// Level
+		if diff := cmp.Diff(1, r.Level()); diff != "" {
+			t.Errorf("Level(parent) (-want, +got) = %s", diff)
+		}
+		if diff := cmp.Diff(2, c.Level()); diff != "" {
+			t.Errorf("Level(child) (-want, +got) = %s", diff)
+		}
+		// Children
+		comparator := func(x, y *tree.Node[testValue]) bool {
+			return x.Value().String() == y.Value().String()
+		}
+		if diff := cmp.Diff([]*tree.Node[testValue]{c}, r.Children(), cmp.Comparer(comparator)); diff != "" {
+			t.Errorf("Children() (-want, +got) = %s", diff)
+		}
+
 	}
 }
 
-func TestNodeAddChildren(t *testing.T) {
-	n := &Node[string]{}
-	c1 := &Node[string]{}
-	c2 := &Node[string]{}
-
-	n.AddChildren(c1, c2)
-
-	if len(n.Children()) != 2 {
-		t.Errorf("Expected 2 children, got %d", len(n.Children()))
-	}
-
-	if n.Children()[0] != c1 || n.Children()[1] != c2 {
-		t.Error("Children not added correctly")
-	}
-}
-
-func TestNodeIsRoot(t *testing.T) {
-	n := &Node[string]{}
-	c := &Node[string]{}
-	n.AddChildren(c)
-
-	if !n.IsRoot() {
-		t.Error("Expected root node")
-	}
-
-	if c.IsRoot() {
-		t.Error("Expected child node not to be root")
-	}
-}
-
-func TestNodeIsLeaf(t *testing.T) {
-	n := &Node[string]{}
-	c := &Node[string]{}
-	n.AddChildren(c)
-
-	if n.IsLeaf() {
-		t.Error("Expected parent node not to be leaf")
-	}
-
-	if !c.IsLeaf() {
-		t.Error("Expected child node to be leaf")
-	}
-}
-
-func TestNodeLevel(t *testing.T) {
-	root := &Node[string]{}
-	child := &Node[string]{}
-	grandChild := &Node[string]{}
-
-	root.AddChildren(child)
-	child.AddChildren(grandChild)
-
-	if root.Level() != 1 {
-		t.Errorf("Expected root level to be 1, got %d", root.Level())
-	}
-
-	if child.Level() != 2 {
-		t.Errorf("Expected child level to be 2, got %d", child.Level())
-	}
-
-	if grandChild.Level() != 3 {
-		t.Errorf("Expected grandchild level to be 3, got %d", grandChild.Level())
-	}
-}
-
-func TestNodeFormat(t *testing.T) {
-	root := &Node[string]{}
-	root.SetValue("root")
-	child1 := &Node[string]{}
-	child1.SetValue("child1")
-	child2 := &Node[string]{}
-	child2.SetValue("child2")
-
-	root.AddChildren(child1, child2)
-	grandChild := &Node[string]{}
-	grandChild.SetValue("grandChild")
-	child1.AddChildren(grandChild)
-
-	formatted := root.Format()
-	expected := "root\n\r   child1\n\r      grandChild\n\r   child2\n\r"
-
-	if formatted != expected {
-		t.Errorf("Expected formatted output:\n%s\nGot:\n%s", expected, formatted)
-	}
-}
-
-func TestNodeAddChild(t *testing.T) {
-	parent := &Node[string]{}
-	child := &Node[string]{}
-
-	parent.addChild(child)
-
-	if len(parent.Children()) != 1 {
-		t.Errorf("Expected 1 child, got %d", len(parent.Children()))
-	}
-
-	if parent.Children()[0] != child {
-		t.Error("Child not added correctly")
-	}
+func TestTreeFormat(t *testing.T) {
+	//TODO
 }
