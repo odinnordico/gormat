@@ -1,5 +1,6 @@
-
 # Gormat
+
+[![Go Report Card](https://goreportcard.com/badge/github.com/odinnordico/gormat)](https://goreportcard.com/report/github.com/odinnordico/gormat)
 
 **Gormat** is a Go library that provides custom implementations of a list and tree data structure with support for formatting and string manipulation utilities. These structures offer a flexible way to manage and display hierarchical or linear collections of data in Go.
 
